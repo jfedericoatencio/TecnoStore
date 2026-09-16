@@ -30,10 +30,10 @@ export async function GET(req: Request) {
   if (where.length) sql += ' WHERE ' + where.join(' AND ');
   sql += ' ORDER BY created_at DESC, id DESC LIMIT 300';
 
-  const orders = qAll<Order>(sql, ...params);
+  const orders = await qAll<Order>(sql, ...params);
   if (orders.length > 0) {
     const ids = orders.map((o) => o.id);
-    const items = qAll<OrderItem>(
+    const items = await qAll<OrderItem>(
       `SELECT * FROM order_items WHERE order_id IN (${ids.map(() => '?').join(',')})`,
       ...ids
     );

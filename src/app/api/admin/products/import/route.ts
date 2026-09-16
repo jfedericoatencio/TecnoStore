@@ -2,12 +2,12 @@
 // Paso 1: recibe el .xlsx/.csv (+ ZIP opcional de imágenes), lo
 // parsea del lado del servidor y devuelve la vista previa con
 // errores y advertencias por fila.
-import fs from 'fs';
 import path from 'path';
 import AdmZip from 'adm-zip';
 import * as XLSX from 'xlsx';
-import { qAll, qRun } from '@/db';
+import { qAll } from '@/db';
 import { requireAdmin } from '@/lib/auth';
+import { uploadFile } from '@/lib/storage';
 import {
   buildImportRow,
   mapHeader,
@@ -43,17 +43,23 @@ export async function POST(req: Request) {
   if (zip instanceof File && zip.size > 0) {
     try {
       const adm = new AdmZip(Buffer.from(await zip.arrayBuffer()));
-      const uploadDir = process.env.UPLOAD_DIR || 'data/uploads';
-      const dir = path.resolve(process.cwd(), uploadDir);
-      fs.mkdirSync(dir, { recursive: true });
       let count = 0;
       for (const entry of adm.getEntries()) {
         const base = path.basename(entry.entryName);
         if (entry.isDirectory || base.startsWith('.') || base.startsWith('__MACOSX')) continue;
         if (!IMAGE_EXT.test(base)) continue;
+        const origExt = path.extname(base).toLowerCase();
+        const mime =
+          origExt === '.png'
+            ? 'image/png'
+            : origExt === '.webp'
+              ? 'image/webp'
+              : origExt === '.gif'
+                ? 'image/gif'
+                : 'image/jpeg';
         const safeName = `${Date.now()}-${count}-${base.toLowerCase().replace(/[^a-z0-9._-]/g, '_')}`;
-        fs.writeFileSync(path.join(dir, safeName), entry.getData());
-        imageUrlMap.set(base.toLowerCase(), `/api/uploads/${safeName}`);
+        const url = await uploadFile(entry.getData(), safeName, mime);
+        imageUrlMap.set(base.toLowerCase(), url);
         count++;
       }
       if (count === 0) {
@@ -103,7 +109,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const cats = qAll<{ id: number; name: string }>('SELECT id, name FROM categories');
+  const cats = await qAll<{ id: number; name: string }>('SELECT id, name FROM categories');
   const existingCats = new Map(cats.map((c) => [c.name.toLowerCase(), c.name]));
   const newCategories = new Set<string>();
 

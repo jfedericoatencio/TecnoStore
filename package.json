@@ -11,10 +11,12 @@
     "db:reset": "node scripts/seed.mjs --force"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.116.0",
     "adm-zip": "^0.5.16",
     "bcryptjs": "^2.4.3",
     "jose": "^5.9.6",
     "next": "^14.2.30",
+    "pg": "^8.23.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "xlsx": "^0.18.5"
@@ -23,6 +25,7 @@
     "@types/adm-zip": "^0.5.7",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^22.0.0",
+    "@types/pg": "^8.23.1",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "autoprefixer": "^10.4.20",

@@ -1,5 +1,5 @@
 // PATCH /api/admin/orders/[id] — cambia el estado del pedido
-import { qGet, qRun } from '@/db';
+import { qRun } from '@/db';
 import { requireAdmin } from '@/lib/auth';
 import { ORDER_STATUSES } from '@/lib/types';
 
@@ -23,7 +23,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     return Response.json({ error: 'Estado inválido' }, { status: 400 });
   }
 
-  const res = qRun('UPDATE orders SET status = ? WHERE id = ?', status, id);
+  const res = await qRun('UPDATE orders SET status = ? WHERE id = ?', status, id);
   if (res.changes === 0) return Response.json({ error: 'Pedido inexistente' }, { status: 404 });
   return Response.json({ ok: true, status });
 }

@@ -26,7 +26,7 @@ export async function POST(req: Request) {
     return Response.json({ error: 'No hay filas para importar' }, { status: 400 });
   }
 
-  const result = tx(() => {
+  const result = await tx(async () => {
     let inserted = 0;
     let updated = 0;
     const skipped: string[] = [];
@@ -43,10 +43,10 @@ export async function POST(req: Request) {
       let categoryId: number | null = null;
       const catName = String(row.categoria ?? '').trim();
       if (catName) {
-        let cat = qGet<{ id: number }>('SELECT id FROM categories WHERE lower(name) = lower(?)', catName);
+        let cat = await qGet<{ id: number }>('SELECT id FROM categories WHERE lower(name) = lower(?)', catName);
         if (!cat && newCategoryMode === 'create') {
-          const max = qAll<{ m: number | null }>('SELECT MAX(sort_order) AS m FROM categories')[0]?.m ?? 0;
-          const ins = qRun('INSERT INTO categories (name, sort_order) VALUES (?, ?)', catName, Number(max) + 1);
+          const max = (await qAll<{ m: number | null }>('SELECT MAX(sort_order) AS m FROM categories'))[0]?.m ?? 0;
+          const ins = await qRun('INSERT INTO categories (name, sort_order) VALUES (?, ?)', catName, Number(max) + 1);
           cat = { id: Number(ins.lastInsertRowid) };
         }
         categoryId = cat?.id ?? null;
@@ -66,10 +66,10 @@ export async function POST(req: Request) {
 
       // ¿Actualización por SKU?
       if (updateExisting && sku) {
-        const existing = qGet<{ id: number }>('SELECT id FROM products WHERE lower(sku) = lower(?)', sku);
+        const existing = await qGet<{ id: number }>('SELECT id FROM products WHERE lower(sku) = lower(?)', sku);
         if (existing) {
-          qRun(
-            `UPDATE products SET name=?, description=?, category_id=?, price=?, promo_price=?, stock=?, unit=?, sku=?, featured=?, available=?, image_url=?, updated_at=datetime('now')
+          await qRun(
+            `UPDATE products SET name=?, description=?, category_id=?, price=?, promo_price=?, stock=?, unit=?, sku=?, featured=?, available=?, image_url=?, updated_at=CURRENT_TIMESTAMP
              WHERE id=?`,
             nombre, descripcion, categoryId, precio, promo, stock, unit, sku, featured, available, image, existing.id
           );
@@ -78,7 +78,7 @@ export async function POST(req: Request) {
         }
       }
 
-      qRun(
+      await qRun(
         `INSERT INTO products (name, description, category_id, price, promo_price, stock, unit, sku, featured, available, image_url)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         nombre, descripcion, categoryId, precio, promo, stock, unit, sku, featured, available, image

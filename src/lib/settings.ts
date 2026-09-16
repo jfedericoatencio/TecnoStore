@@ -2,8 +2,8 @@
 import { qAll } from '@/db';
 import type { PublicSettings, SettingsMap } from './types';
 
-export function getSettingsMap(): SettingsMap {
-  const rows = qAll<{ key: string; value: string }>('SELECT key, value FROM settings');
+export async function getSettingsMap(): Promise<SettingsMap> {
+  const rows = await qAll<{ key: string; value: string }>('SELECT key, value FROM settings');
   const map: SettingsMap = {};
   for (const r of rows) map[r.key] = r.value;
   return map;

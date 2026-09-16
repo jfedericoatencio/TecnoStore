@@ -66,11 +66,22 @@ export const STATUS_CLASSES: Record<OrderStatus, string> = {
   cancelado: 'bg-red-100 text-red-700',
 };
 
-/** "2026-09-16 14:03:22" (UTC en SQLite) → fecha local legible */
-export function formatDateTime(sqlDate: string): string {
-  const iso = sqlDate.includes('T') ? sqlDate : sqlDate.replace(' ', 'T') + 'Z';
+/** "2026-09-16 14:03:22" o Date → fecha local legible */
+export function formatDateTime(sqlDate: string | Date | null | undefined): string {
+  if (!sqlDate) return '';
+  if (sqlDate instanceof Date) {
+    return sqlDate.toLocaleString('es-AR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+  const s = String(sqlDate);
+  const iso = s.includes('T') ? s : s.replace(' ', 'T') + 'Z';
   const d = new Date(iso);
-  if (isNaN(d.getTime())) return sqlDate;
+  if (isNaN(d.getTime())) return s;
   return d.toLocaleString('es-AR', {
     day: '2-digit',
     month: '2-digit',

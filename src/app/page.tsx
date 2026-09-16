@@ -9,7 +9,7 @@ import StoreView from '@/components/store/StoreView';
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
-  const productRows = qAll(`
+  const productRows = await qAll(`
     SELECT p.*, c.name AS category_name
     FROM products p
     LEFT JOIN categories c ON c.id = p.category_id
@@ -18,14 +18,14 @@ export default async function HomePage() {
   `);
   const products: Product[] = productRows.map(mapProduct);
 
-  const categories = qAll(`
+  const categories = (await qAll(`
     SELECT c.id, c.name, c.sort_order,
       (SELECT COUNT(*) FROM products p WHERE p.category_id = c.id AND p.available = 1) AS product_count
     FROM categories c
     ORDER BY c.sort_order, c.name
-  `) as unknown as Category[];
+  `)) as unknown as Category[];
 
-  const settings = publicSettings(getSettingsMap());
+  const settings = publicSettings(await getSettingsMap());
 
   return <StoreView products={products} categories={categories} settings={settings} />;
 }

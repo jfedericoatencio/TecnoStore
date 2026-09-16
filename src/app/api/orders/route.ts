@@ -1,7 +1,7 @@
 // POST /api/orders — registra el pedido de un cliente (público).
 // Los precios se recalculan del lado del servidor (nunca se
 // confía en el frontend) y se descuenta stock atómicamente.
-import { qAll, qGet, qRun, tx, lastId } from '@/db';
+import { qAll, qRun, tx, lastId } from '@/db';
 import type { Product, SettingsMap } from '@/lib/types';
 import { finalPrice } from '@/lib/format';
 
@@ -10,6 +10,10 @@ export const dynamic = 'force-dynamic';
 interface IncomingItem {
   productId: number;
   quantity: number;
+}
+
+function generateOrderNumber(orderId: number): string {
+  return 'PED-' + String(orderId).padStart(6, '0');
 }
 
 export async function POST(req: Request) {
@@ -44,7 +48,7 @@ export async function POST(req: Request) {
 
   // Recalcular precios con la base de datos
   const ids = items.map((i) => Number(i.productId)).filter((n) => Number.isInteger(n) && n > 0);
-  const products = qAll<Product>(
+  const products = await qAll<Product>(
     `SELECT * FROM products WHERE available = 1 AND id IN (${ids.map(() => '?').join(',')})`,
     ...ids
   );
@@ -78,7 +82,7 @@ export async function POST(req: Request) {
   const total = orderItems.reduce((s, i) => s + i.price * i.quantity, 0);
 
   // Pedido mínimo
-  const settingsRows = qAll<{ key: string; value: string }>('SELECT key, value FROM settings');
+  const settingsRows = await qAll<{ key: string; value: string }>('SELECT key, value FROM settings');
   const settings: SettingsMap = {};
   for (const r of settingsRows) settings[r.key] = r.value;
   const minOrder = Number(settings.min_order || 0);
@@ -90,21 +94,22 @@ export async function POST(req: Request) {
   }
 
   try {
-    const result = tx(() => {
-      const ins = qRun(
+    const result = await tx(async () => {
+      const tempNumber = 'TEMP-' + Date.now();
+      const ins = await qRun(
         `INSERT INTO orders (number, customer_name, phone, address, location, reference, payment_method, notes, total, status)
-         VALUES ('', ?, ?, ?, ?, ?, ?, ?, ?, 'nuevo')`,
-        name, phone, address, location, reference, payment, notes, total
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'nuevo')`,
+        tempNumber, name, phone, address, location, reference, payment, notes, total
       );
       const orderId = lastId(ins);
-      const number = 'PED-' + String(orderId).padStart(6, '0');
-      qRun('UPDATE orders SET number = ? WHERE id = ?', number, orderId);
+      const number = generateOrderNumber(orderId);
+      await qRun('UPDATE orders SET number = ? WHERE id = ?', number, orderId);
       for (const it of orderItems) {
-        qRun(
+        await qRun(
           `INSERT INTO order_items (order_id, product_id, name, unit, price, quantity) VALUES (?, ?, ?, ?, ?, ?)`,
           orderId, it.productId, it.name, it.unit, it.price, it.quantity
         );
-        const upd = qRun(
+        const upd = await qRun(
           'UPDATE products SET stock = stock - ? WHERE id = ? AND stock >= ?',
           it.quantity, it.productId, it.quantity
         );

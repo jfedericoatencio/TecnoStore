@@ -5,7 +5,7 @@ import type { Product } from '@/lib/types';
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  const rows = qAll(`
+  const rows = await qAll(`
     SELECT p.*, c.name AS category_name
     FROM products p
     LEFT JOIN categories c ON c.id = p.category_id
