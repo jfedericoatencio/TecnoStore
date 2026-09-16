@@ -1,0 +1,20 @@
+# Dependencias
+node_modules/
+
+# Next.js
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+
+# Variables de entorno (NUNCA subir claves)
+.env
+.env.local
+.env.production
+
+# Base de datos local y archivos subidos (se regeneran con `npm run db:seed`)
+data/
+
+# Sistema
+.DS_Store
+*.log
