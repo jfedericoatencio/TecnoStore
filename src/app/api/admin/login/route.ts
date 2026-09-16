@@ -43,7 +43,7 @@ export async function POST(req: Request) {
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: 'Datos inválidos' }, { status: 400 });
+    return Response.json({ error: 'Datos inválidos' }, { status: 400 });
   }
 
   const username = String(body?.username ?? '').trim();
@@ -52,7 +52,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Completá usuario y contraseña' }, { status: 400 });
   }
 
-  const user = qGet<{ id: number; username: string; password_hash: string; must_change_password: number }>(
+  const user = await qGet<{ id: number; username: string; password_hash: string; must_change_password: number }>(
     'SELECT id, username, password_hash, must_change_password FROM users WHERE username = ?',
     username
   );

@@ -9,7 +9,7 @@ export async function GET() {
   const auth = await requireAdmin();
   if (!auth.ok) return auth.res;
 
-  const rows = qAll(`
+  const rows = await qAll(`
     SELECT p.*, c.name AS category_name
     FROM products p
     LEFT JOIN categories c ON c.id = p.category_id
@@ -34,13 +34,13 @@ export async function POST(req: Request) {
     return Response.json({ error: 'Revisá los campos marcados', errors }, { status: 400 });
   }
 
-  const res = qRun(
+  const res = await qRun(
     `INSERT INTO products (name, description, category_id, price, promo_price, stock, unit, sku, featured, available, image_url)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     values.name, values.description, values.category_id, values.price, values.promo_price,
     values.stock, values.unit, values.sku, values.featured, values.available, values.image_url
   );
-  const row = qAll(
+  const row = await qAll(
     'SELECT p.*, c.name AS category_name FROM products p LEFT JOIN categories c ON c.id = p.category_id WHERE p.id = ?',
     lastId(res)
   );

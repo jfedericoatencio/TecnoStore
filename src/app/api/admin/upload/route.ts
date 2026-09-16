@@ -1,10 +1,9 @@
 // POST /api/admin/upload — subida de imágenes (celular o computadora)
-// Se guardan en UPLOAD_DIR (persistente) y se sirven vía /api/uploads/.
-// En producción con Supabase se puede reemplazar por Supabase Storage.
-import fs from 'fs';
+// En producción se guarda en Supabase Storage (persistente); en desarrollo local en UPLOAD_DIR.
 import path from 'path';
 import crypto from 'crypto';
 import { requireAdmin } from '@/lib/auth';
+import { uploadFile } from '@/lib/storage';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,12 +48,27 @@ export async function POST(req: Request) {
     );
   }
 
-  const uploadDir = process.env.UPLOAD_DIR || 'data/uploads';
-  const dir = path.resolve(process.cwd(), uploadDir);
-  fs.mkdirSync(dir, { recursive: true });
+  const mime =
+    file.type ||
+    (ext === '.png'
+      ? 'image/png'
+      : ext === '.webp'
+        ? 'image/webp'
+        : ext === '.gif'
+          ? 'image/gif'
+          : 'image/jpeg');
 
   const name = `${Date.now()}-${crypto.randomBytes(4).toString('hex')}${ext}`;
-  fs.writeFileSync(path.join(dir, name), Buffer.from(await file.arrayBuffer()));
 
-  return Response.json({ ok: true, url: `/api/uploads/${name}` });
+  try {
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const url = await uploadFile(buffer, name, mime);
+    return Response.json({ ok: true, url });
+  } catch (err: any) {
+    console.error('Error procesando upload:', err);
+    return Response.json(
+      { error: err?.message || 'Error al procesar la imagen' },
+      { status: 500 }
+    );
+  }
 }

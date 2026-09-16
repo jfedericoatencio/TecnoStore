@@ -32,7 +32,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'La nueva contraseña debe ser distinta a la actual' }, { status: 400 });
   }
 
-  const user = qGet<{ id: number; username: string; password_hash: string; must_change_password: number }>(
+  const user = await qGet<{ id: number; username: string; password_hash: string; must_change_password: number }>(
     'SELECT * FROM users WHERE id = ?',
     auth.session.sub
   );
@@ -43,8 +43,8 @@ export async function POST(req: Request) {
   }
 
   const hash = bcrypt.hashSync(next, 10);
-  qRun(
-    `UPDATE users SET password_hash = ?, must_change_password = 0, updated_at = datetime('now') WHERE id = ?`,
+  await qRun(
+    `UPDATE users SET password_hash = ?, must_change_password = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
     hash,
     user.id
   );

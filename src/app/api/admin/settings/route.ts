@@ -20,7 +20,7 @@ const ALLOWED_KEYS = new Set([
 export async function GET() {
   const auth = await requireAdmin();
   if (!auth.ok) return auth.res;
-  const rows = qAll<{ key: string; value: string }>('SELECT key, value FROM settings');
+  const rows = await qAll<{ key: string; value: string }>('SELECT key, value FROM settings');
   const settings: SettingsMap = {};
   for (const r of rows) settings[r.key] = r.value;
   return Response.json({ settings });
@@ -53,10 +53,10 @@ export async function PUT(req: Request) {
     return Response.json({ error: 'El pedido mínimo debe ser un número' }, { status: 400 });
   }
 
-  tx(() => {
+  await tx(async () => {
     for (const [key, value] of entries) {
       const v = key === 'whatsapp_phone' ? whatsapp : String(value ?? '');
-      qRun(
+      await qRun(
         'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
         key,
         v
@@ -64,7 +64,7 @@ export async function PUT(req: Request) {
     }
   });
 
-  const rows = qAll<{ key: string; value: string }>('SELECT key, value FROM settings');
+  const rows = await qAll<{ key: string; value: string }>('SELECT key, value FROM settings');
   const settings: SettingsMap = {};
   for (const r of rows) settings[r.key] = r.value;
   return Response.json({ ok: true, settings });
